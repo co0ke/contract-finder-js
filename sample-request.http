@@ -1,0 +1,5 @@
+### Relevant UK contracts from the last 7 days (keywords come from Search__Keywords__N, or the defaults)
+GET http://localhost:7071/api/jobs
+
+### Custom comma-separated keywords, from the last 3 days
+GET http://localhost:7071/api/jobs?q=Blazor, F%23, backend engineer&days=3

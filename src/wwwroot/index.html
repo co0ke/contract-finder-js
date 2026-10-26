@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-default-keywords="{{DEFAULT_KEYWORDS}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contract Finder</title>
+  <style>
+    /* The theme is data-theme on <html>: "light" or "dark", set by app.js from the saved setting
+       (system, light or dark), so the dark palette needs no media query of its own. */
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9; --surface: #fff; --text: #1a1d23; --muted: #5f6673; --border: #e2e5ea;
+      --accent: #2f5bea; --accent-soft: #e8eefe; --new: #0f7b45; --new-soft: #e3f5eb; --warn: #9a5b00; --warn-soft: #fdf1dc;
+      --radius: 10px;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #111317; --surface: #1a1d23; --text: #e8eaee; --muted: #9aa1ad; --border: #2c313a;
+      --accent: #7c9bff; --accent-soft: #232c45; --new: #5fd198; --new-soft: #17301f; --warn: #f0b85a; --warn-soft: #33280f;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 0 0 16px; }
+    h1 { font-size: 22px; margin: 0; }
+    header label { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; }
+
+    form { display: grid; grid-template-columns: 3fr 1fr 1fr auto; gap: 8px; align-items: end;
+           background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+    input, select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border);
+                            border-radius: 6px; padding: 7px 9px; min-width: 0; }
+    button { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: .6; cursor: wait; }
+    @media (max-width: 640px) { form { grid-template-columns: 1fr 1fr; } form label:first-child, form button { grid-column: 1 / -1; } }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+               margin: 16px 0 8px; color: var(--muted); font-size: 13px; }
+    .toolbar label { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; }
+    .sources { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip { border-radius: 999px; padding: 2px 9px; font-size: 12px; background: var(--accent-soft); color: var(--accent); }
+    .chip.error, .chip.warning { background: var(--warn-soft); color: var(--warn); }
+    button.chip { font-weight: inherit; border: 1px solid transparent; cursor: pointer; }
+    button.chip[aria-pressed="false"] { opacity: .55; text-decoration: line-through; }
+    button.chip:disabled { cursor: default; opacity: .8; }
+    .status button { margin-left: 8px; }
+
+    .status { padding: 32px 16px; text-align: center; color: var(--muted); }
+    .status.error { color: var(--warn); }
+
+    ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    li.seen { opacity: .72; }
+    .row { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }
+    .title { font-weight: 600; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
+    .title:hover { color: var(--accent); text-decoration: underline; }
+    .rate { white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .rate.none { color: var(--muted); font-weight: 400; }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+    .badge { font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 6px; background: var(--new-soft); color: var(--new); }
+    .tag { font-size: 11px; border-radius: 4px; padding: 1px 6px; background: var(--accent-soft); color: var(--accent); }
+    .snippet { margin: 6px 0 0; font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+  <script src="app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Contract Finder</h1>
+    <label>Theme
+      <select id="theme" title="Follow the device setting, or choose one">
+        <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+      </select>
+    </label>
+  </header>
+
+  <form id="search">
+    <label>Keywords (comma-separated)
+      <input name="q" placeholder="Default keywords" title="Clear to go back to the default keywords"></label>
+    <label>Posted within
+      <select name="days">
+        <option value="1">1 day</option><option value="3">3 days</option>
+        <option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option>
+      </select>
+    </label>
+    <label>Min £/day <input name="minRate" type="number" min="0" step="25" placeholder="Any"></label>
+    <button type="submit">Search</button>
+  </form>
+
+  <div class="toolbar" id="toolbar" hidden>
+    <span id="summary"></span>
+    <div class="sources" id="sources"></div>
+    <label>Sort
+      <select id="sort">
+        <option value="date">Newest</option>
+        <option value="rate">Highest rate</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="newOnly"> New only</label>
+  </div>
+
+  <div id="status" class="status">Search to see contract roles.</div>
+  <ul id="results"></ul>
+</main>
+</body>
+</html>

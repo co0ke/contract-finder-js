@@ -1,0 +1,113 @@
+# Builds and tests every push and pull request to main; pushes to main also deploy the function app.
+# Infrastructure isn't deployed here: HCP Terraform runs infra/. infra/bootstrap creates the service
+# connection and environment named below, so change them there too. The environment makes each deploy
+# wait for a manual approval in Azure DevOps.
+trigger:
+  branches:
+    include: [main]
+  paths:
+    exclude: [infra, docs, '**/*.md']
+
+pr:
+  branches:
+    include: [main]
+  paths:
+    exclude: [infra, docs, '**/*.md']
+
+variables:
+  serviceConnection: contract-finder-azure
+  resourceGroup: rg-contractfinder # rg-${var.name} in infra/main.tf
+  nodeVersion: 22.x
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            displayName: Install Node.js
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: npm ci
+            displayName: Install
+
+          - script: >-
+              node --test --test-reporter=spec --test-reporter-destination=stdout
+              --test-reporter=junit --test-reporter-destination=$(Agent.TempDirectory)/TestResults/utc.xml
+              "test/**/*.test.js"
+            displayName: Test
+
+          # Agents run in UTC, which hides bugs where a cutoff picks up the server's local offset.
+          - script: >-
+              TZ=America/New_York node --test --test-reporter=spec --test-reporter-destination=stdout
+              --test-reporter=junit --test-reporter-destination=$(Agent.TempDirectory)/TestResults/non-utc.xml
+              "test/**/*.test.js"
+            displayName: Test outside UTC
+
+          - task: PublishTestResults@2
+            displayName: Publish test results
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: '**/*.xml'
+              searchFolder: $(Agent.TempDirectory)/TestResults
+
+          # Production dependencies only: the host runs what's in the zip.
+          - script: |
+              set -euo pipefail
+              mkdir -p $(Agent.TempDirectory)/publish
+              cp -r src host.json package.json package-lock.json $(Agent.TempDirectory)/publish/
+              cd $(Agent.TempDirectory)/publish && npm ci --omit=dev
+            displayName: Publish function app
+
+          - task: ArchiveFiles@2
+            displayName: Zip function app
+            inputs:
+              rootFolderOrFile: $(Agent.TempDirectory)/publish
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/app.zip
+
+          - publish: $(Build.ArtifactStagingDirectory)/app.zip
+            artifact: app
+            displayName: Upload package
+
+  - stage: Deploy
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - deployment: Deploy
+        environment: production
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # The app's name has a random suffix that only Terraform's state knows, so look it up.
+                - task: AzureCLI@2
+                  displayName: Find function app
+                  inputs:
+                    azureSubscription: $(serviceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      name=$(az functionapp list --resource-group "$(resourceGroup)" --query "[0].name" --output tsv)
+                      if [ -z "$name" ]; then
+                        echo "##vso[task.logissue type=error]No function app in $(resourceGroup); apply infra/ in HCP Terraform first."
+                        exit 1
+                      fi
+                      echo "##vso[task.setvariable variable=functionAppName]$name"
+
+                - task: AzureFunctionApp@2
+                  displayName: Deploy function app
+                  inputs:
+                    azureSubscription: $(serviceConnection)
+                    appType: functionAppLinux
+                    isFlexConsumption: true
+                    appName: $(functionAppName)
+                    package: $(Pipeline.Workspace)/app/app.zip

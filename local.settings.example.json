@@ -1,0 +1,18 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "MOCK_EXTERNALS": "true",
+    "JobStore__ConnectionString": "UseDevelopmentStorage=true",
+    "Adzuna__AppId": "",
+    "Adzuna__AppKey": "",
+    "Adzuna__Country": "gb",
+    "Reed__ApiKey": "",
+    "Search__Keywords__0": ".NET",
+    "Search__Keywords__1": "C#",
+    "Search__Keywords__2": "Azure",
+    "Search__Keywords__3": "backend engineer",
+    "Search__Keywords__4": "software engineer"
+  }
+}

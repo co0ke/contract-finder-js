@@ -1,0 +1,28 @@
+{
+  "name": "contract-finder",
+  "version": "1.0.0",
+  "description": "Finds relevant UK contract roles across several job sites, in one list sorted newest first. Node.js port of the TemplateTest .NET solution.",
+  "private": true,
+  "type": "module",
+  "main": "src/functions/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "start:live": "MOCK_EXTERNALS=false node src/server.js",
+    "cleanup": "node src/cleanup.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:tz": "TZ=America/New_York node --test \"test/**/*.test.js\"",
+    "test:all": "npm test && npm run test:tz",
+    "test:coverage": "node --test --experimental-test-coverage \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.3.0",
+    "@azure/functions": "^4.7.0",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (gitignored) and fill in; bootstrap/ copies these into the HCP workspace.
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Who may set the API secrets in the Key Vault: az ad signed-in-user show --query id -o tsv
+key_vault_admin_object_id = "00000000-0000-0000-0000-000000000000"
+
+# Optional: replace the default search keywords.
+# search_keywords = [".NET", "C#", "Azure"]
